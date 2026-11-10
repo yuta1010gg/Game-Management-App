@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>ゲーム管理アプリ - 統計</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <h1>ゲーム管理アプリ</h1>
+
+        <h2>統計</h2>
+
+        <h3>全体</h3>
+        <table border="1">
+            <tr><th>登録本数</th><td>{{ total }}本</td></tr>
+            <tr><th>クリア済み</th><td>{{ cleared }}本</td></tr>
+            <tr><th>合計プレイ時間</th><td>{{ total_time }}時間</td></tr>
+            <tr>
+                <th>平均評価</th>
+                <td>
+                    {% if avg_rating is not none %}
+                        ★{{ '%.1f'|format(avg_rating) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        <h3>プレイ状況別</h3>
+        <table border="1">
+            <tr><th>プレイ状況</th><th>本数</th></tr>
+            {% for name, count in status_counts %}
+                <tr><td>{{ name }}</td><td>{{ count }}本</td></tr>
+            {% endfor %}
+        </table>
+
+        <h3>ジャンル別</h3>
+        <table border="1">
+            <tr><th>ジャンル</th><th>本数</th></tr>
+            {% for name, count in genre_counts %}
+                <tr><td>{{ name }}</td><td>{{ count }}本</td></tr>
+            {% endfor %}
+        </table>
+
+        <h3>プラットフォーム別</h3>
+        <table border="1">
+            <tr><th>プラットフォーム</th><th>本数</th></tr>
+            {% for name, count in platform_counts %}
+                <tr><td>{{ name }}</td><td>{{ count }}本</td></tr>
+            {% endfor %}
+        </table>
+
+        <br>
+        <a href="{{ url_for('index') }}">一覧に戻る</a>
+    </body>
+</html>

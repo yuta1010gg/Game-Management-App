@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>ゲーム管理アプリ</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <h1>ゲーム管理アプリ</h1>
+
+        <h2>ゲーム編集</h2>
+
+          <form method="post" action="{{ url_for('update', game_id=game[0]) }}" enctype="multipart/form-data">
+            <table border="1">
+                <tr>
+                    <th>タイトル</th>
+                    <td><input type="text" name="title" value="{{ game[1] }}"></td>
+                </tr>
+                <tr>
+                    <th>プラットフォーム</th>
+                    <td>
+                        <select name="platform_id">
+                            {% for p in platforms %}
+                                <option value="{{ p[0] }}" {% if p[0] == game[2] %}selected{% endif %}>
+                                    {{ p[1] }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>プレイ状況</th>
+                    <td>
+                        <select name="status_id">
+                            {% for p in statuses %}
+                                <option value="{{ p[0] }}" {% if p[0] == game[3] %}selected{% endif %}>
+                                    {{ p[1] }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>ジャンル</th>
+                    <td>
+                        <select name="genre_id">
+                            {% for p in genres %}
+                                <option value="{{ p[0] }}" {% if p[0] == game[4] %}selected{% endif %}>
+                                    {{ p[1] }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>評価</th>
+                    <td>
+                        <select name="rating">
+                            <option value="">未評価</option>
+                            {% for i in range(1, 6) %}
+                                <option value="{{ i }}" {% if game[5] == i %}selected{% endif %}>★{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>プレイ時間(時間)</th>
+                    <td><input type="number" name="play_time" min="0" value="{{ game[8] if game[8] is not none else '' }}"></td>
+                </tr>
+                <tr>
+                    <th>購入日</th>
+                    <td><input type="date" name="purchase_date" value="{{ game[7] or '' }}"></td>
+                </tr>
+                <tr>
+                    <th>感想メモ</th>
+                    <td><textarea name="memo" rows="4" cols="40">{{ game[6] or '' }}</textarea></td>
+                </tr>
+                <tr>
+                    <th>画像</th>
+                    <td>
+                        {% if game[9] %}
+                            <img src="{{ url_for('static', filename='uploads/' ~ game[9]) }}"
+                                 alt="{{ game[1] }}" style="max-width: 200px;"><br>
+                        {% else %}
+                            <p>画像なし</p>
+                        {% endif %}
+                        <input type="file" name="image" accept="image/*">
+                        <br><small>※ 新しい画像を選ぶと差し替わります(選ばなければそのまま)</small>
+                    </td>
+                </tr>
+            </table>
+
+            <br>
+            <input type="submit" value="更新">
+        </form>
+
+        <form method="post" action="{{ url_for('delete', game_id=game[0]) }}"
+              onsubmit="return confirm('本当に削除しますか？');">
+            <input type="submit" value="削除">
+        </form>
+
+        <br>
+        <a href="{{ url_for('index') }}">一覧に戻る</a>
+    </body>
+</html>

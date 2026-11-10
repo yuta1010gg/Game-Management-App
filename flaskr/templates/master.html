@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>ゲーム管理アプリ - マスタ管理</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <h1>ゲーム管理アプリ</h1>
+
+        <h2>マスタ管理</h2>
+
+        {% if msg %}
+            <p class="msg">{{ msg }}</p>
+        {% endif %}
+
+        {% for s in sections %}
+            <h3>{{ s.label }}</h3>
+
+            <form method="post" action="{{ url_for('master_add', table=s.table) }}">
+                <input type="text" name="name" placeholder="{{ s.label }}を追加" required>
+                <input type="submit" value="追加">
+            </form>
+
+            <table border="1">
+                <tr>
+                    <th>名前</th>
+                    <th>使用中のゲーム</th>
+                    <th>操作</th>
+                </tr>
+                {% for item_id, name, count in s.rows %}
+                    <tr>
+                        <td>{{ name }}</td>
+                        <td>{{ count }}本</td>
+                        <td>
+                            {% if count == 0 %}
+                                <form method="post"
+                                      action="{{ url_for('master_delete', table=s.table, item_id=item_id) }}"
+                                      onsubmit="return confirm('「{{ name }}」を削除しますか？');">
+                                    <input type="submit" value="削除">
+                                </form>
+                            {% else %}
+                                <span>使用中のため削除不可</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endfor %}
+
+        <br>
+        <a href="{{ url_for('index') }}">一覧に戻る</a>
+    </body>
+</html>

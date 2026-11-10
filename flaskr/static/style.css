@@ -1,0 +1,313 @@
+/* =========================================================
+   ゲーム管理アプリ style.css
+   置き場所: flaskr/static/style.css
+   ========================================================= */
+
+/* ---------- 色などの「設定値」をまとめておく ----------
+   色を変えたいときは、ここだけ書き換えればOK */
+:root {
+    --bg: #f4f6fb;          /* 背景 */
+    --card: #ffffff;        /* 表やフォームの背景 */
+    --text: #222a3a;        /* 文字 */
+    --muted: #6b7488;       /* 薄い文字 */
+    --primary: #4f6df5;     /* メインの色(ボタン・リンク) */
+    --primary-dark: #3a55d8;
+    --danger: #e5484d;      /* 削除ボタン */
+    --danger-dark: #c93a3f;
+    --border: #dde2ee;      /* 線 */
+    --stripe: #f8f9fd;      /* 表の縞模様 */
+    --hover: #eef2ff;       /* 行にカーソルを乗せたとき */
+}
+
+/* ダークモード(パソコンの設定が暗いときだけ自動で切り替わる) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #14171f;
+        --card: #1d212c;
+        --text: #e6e9f2;
+        --muted: #98a1b8;
+        --primary: #7b93ff;
+        --primary-dark: #9aaeff;
+        --border: #333a4d;
+        --stripe: #222735;
+        --hover: #2a3150;
+    }
+}
+
+/* ---------- 全体 ---------- */
+* {
+    box-sizing: border-box;   /* 幅の計算を分かりやすくする */
+}
+
+body {
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    max-width: 1100px;        /* 横に広がりすぎないようにする */
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+h1 {
+    font-size: 1.6rem;
+    margin: 0 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--primary);
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin: 28px 0 12px;
+}
+
+h3 {
+    font-size: 1rem;
+    margin: 20px 0 8px;
+    color: var(--muted);
+}
+
+/* ---------- リンク ---------- */
+a {
+    color: var(--primary);
+    text-decoration: none;
+    margin-right: 12px;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ---------- 表 ---------- */
+table {
+    border-collapse: collapse;   /* HTMLの border="1" を上書きして線を1本にする */
+    border: 1px solid var(--border);
+    background: var(--card);
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+th, td {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+th {
+    background: var(--primary);
+    color: #fff;
+    white-space: nowrap;         /* 見出しを途中で改行しない */
+}
+
+/* 縞模様と、カーソルを乗せたときの色 */
+tr:nth-child(even) td {
+    background: var(--stripe);
+}
+
+tr:hover td {
+    background: var(--hover);
+}
+
+/* メモが長くても表が崩れないようにする */
+td {
+    max-width: 280px;
+    word-break: break-word;
+}
+
+/* 統計ページなど、小さい表は幅いっぱいに広げない */
+h3 + table {
+    width: auto;
+    min-width: 320px;
+}
+
+/* ---------- 入力欄・ボタン ---------- */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+    font: inherit;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+
+button,
+input[type="submit"] {
+    font: inherit;
+    padding: 7px 18px;
+    border: none;
+    border-radius: 6px;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+}
+
+button:hover,
+input[type="submit"]:hover {
+    background: var(--primary-dark);
+}
+
+/* 削除ボタンだけ赤くする(action に /delete/ を含むフォームの中のボタン) */
+form[action*="/delete/"] input[type="submit"] {
+    background: var(--danger);
+}
+
+form[action*="/delete/"] input[type="submit"]:hover {
+    background: var(--danger-dark);
+}
+
+/* ---------- 一覧ページの検索フォーム ---------- */
+/* method="get" のフォームは、検索・並び替え・絞り込みの欄 */
+form[method="get"] {
+    display: flex;
+    flex-wrap: wrap;             /* 画面が狭いときは折り返す */
+    gap: 8px;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+form[method="get"] input[type="text"] {
+    flex: 1 1 200px;             /* 検索欄を広めにする */
+}
+
+/* ---------- 表の中のフォーム(お気に入りのチェックボックス) ---------- */
+td form {
+    margin: 0;
+}
+
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary);   /* チェックの色 */
+}
+
+/* ---------- 編集・登録ページ ---------- */
+/* 入力フォームの表は、左の見出しの列を細くする */
+form[method="post"] table th {
+    width: 160px;
+}
+
+/* 登録・編集フォームの入力欄は、セルいっぱいに広げる */
+form[method="post"] table input[type="text"],
+form[method="post"] table textarea {
+    width: 100%;
+}
+
+/* 編集ページの「更新」と「削除」のフォームの間隔 */
+form[method="post"] + form[method="post"] {
+    margin-top: 12px;
+}
+
+/* ---------- スマホなど画面が狭いとき ---------- */
+@media (max-width: 700px) {
+    body {
+        padding: 16px 10px 40px;
+    }
+
+    /* 表が画面からはみ出したら、表の中だけ横にスクロールさせる */
+    table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    form[method="post"] table th {
+        width: auto;
+    }
+}
+
+/* ---------- メモの「もっと見る」 ---------- */
+.memo summary {
+    cursor: pointer;
+    list-style: none;               /* 標準の三角マークを消す */
+}
+
+.memo summary::-webkit-details-marker {
+    display: none;                  /* Safari・Chrome 用 */
+}
+
+.memo .more,
+.memo .less {
+    color: var(--primary);
+    font-size: 0.85rem;
+    margin-left: 4px;
+}
+
+/* 閉じているときは「閉じる」を隠し、開いたときは逆にする */
+.memo .less {
+    display: none;
+}
+
+.memo[open] .short,
+.memo[open] .more {
+    display: none;
+}
+
+.memo[open] .less {
+    display: inline;
+}
+
+/* 全文表示。メモの改行をそのまま見せる */
+.memo .full {
+    margin-top: 6px;
+    white-space: pre-wrap;
+}
+
+.msg {
+    padding: 10px 14px;
+    background: var(--hover);
+    border-left: 4px solid var(--primary);
+    border-radius: 4px;
+}
+
+/* ページ上部のメニューボタン */
+.menu-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;          /* 画面が狭いときは折り返す */
+    margin: 16px 0 24px;
+}
+.menu-btn {
+    display: inline-block;
+    padding: 10px 18px;
+    border: 1px solid #4f6bf5;
+    border-radius: 8px;
+    color: #4f6bf5;
+    background: #fff;
+    text-decoration: none;
+    font-weight: bold;
+}
+.menu-btn:hover {
+    background: #eef1ff;
+}
+.menu-btn.primary {           /* 「ゲームを登録する」だけ塗りつぶし */
+    background: #4f6bf5;
+    color: #fff;
+}
+.menu-btn.primary:hover {
+    background: #3f58d6;
+}
+
+/* 一覧のサムネイル画像 */
+.thumb {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;     /* 縦横比を保ったまま、枠いっぱいに切り抜いて表示 */
+    border-radius: 6px;
+    display: block;
+}

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>ゲーム管理アプリ</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <h1>ゲーム管理アプリ</h1>
+
+        <h2>ゲーム登録</h2>
+
+        <form method="post" action="{{ url_for('register') }}" enctype="multipart/form-data">
+            <table border="1">
+                <tr>
+                    <th>タイトル</th>
+                    <td><input type="text" name="title"></td>
+                </tr>
+                <tr>
+                <th>プラットフォーム</th>
+                    <td>
+                        <select name="platform_id">
+                            {% for p in platforms %}
+                                <option value="{{ p[0] }}">{{ p[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>プレイ状況</th>
+                    <td>
+                        <select name="status_id">
+                            {% for p in statuses %}
+                                <option value="{{ p[0] }}">{{ p[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>ジャンル</th>
+                    <td>
+                        <select name="genre_id">
+                            {% for p in genres %}
+                                <option value="{{ p[0] }}">{{ p[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>評価</th>
+                    <td>
+                        <select name="rating">
+                            <option value="">未評価</option>
+                            <option value="1">★1</option>
+                            <option value="2">★2</option>
+                            <option value="3">★3</option>
+                            <option value="4">★4</option>
+                            <option value="5">★5</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>プレイ時間(時間)</th>
+                    <td><input type="number" name="play_time" min="0"></td>
+                </tr>
+                <tr>
+                    <th>購入日</th>
+                    <td><input type="date" name="purchase_date"></td>
+                </tr>
+                <tr>
+                    <th>感想メモ</th>
+                    <td><textarea name="memo" rows="4" cols="40"></textarea></td>
+                </tr>
+                <tr>
+                    <th>画像(任意)</th>
+                    <td><input type="file" name="image" accept="image/*"></td>
+                </tr>
+            </table>
+
+            <br>
+            <input type="submit" value="登録">
+        </form>
+
+        <br>
+        <a href="{{ url_for('index') }}">一覧に戻る</a>
+    </body>
+</html>
