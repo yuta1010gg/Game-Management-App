@@ -1,6 +1,7 @@
+import os
 from flask import Flask
 app = Flask(__name__)
-app.secret_key = '98ce42009ef135d5e46b840d5863dd79e38d3c50835a4434870ea4799fbf83dc'
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key")
 import flaskr.main
 
 from flaskr import db
