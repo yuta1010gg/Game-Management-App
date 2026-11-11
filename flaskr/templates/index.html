@@ -79,6 +79,7 @@
                     <th>プレイ時間</th>
                     <th>購入日</th>
                     <th>メモ</th>
+                    <th>日記</th>
                 </tr>
 
                 {% for game in games %}
@@ -123,6 +124,7 @@
                                 {{ game.memo }}
                             {% endif %}
                         </td>
+                        <td><a href="{{ url_for('diary', game_id=game.id) }}">📖 {{ game.diary_count }}件</a></td>
                     </tr>
                 {% endfor %}
             </table>

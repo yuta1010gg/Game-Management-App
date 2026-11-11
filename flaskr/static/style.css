@@ -161,11 +161,11 @@ input[type="submit"]:hover {
 }
 
 /* 削除ボタンだけ赤くする(action に /delete/ を含むフォームの中のボタン) */
-form[action*="/delete/"] input[type="submit"] {
+form[action*="/delete"] input[type="submit"] {
     background: var(--danger);
 }
 
-form[action*="/delete/"] input[type="submit"]:hover {
+form[action*="/delete"] input[type="submit"]:hover {
     background: var(--danger-dark);
 }
 
@@ -310,4 +310,32 @@ form[method="post"] + form[method="post"] {
     object-fit: cover;     /* 縦横比を保ったまま、枠いっぱいに切り抜いて表示 */
     border-radius: 6px;
     display: block;
+}
+
+/* ---------- 日記ページ ---------- */
+/* 日記1件ぶんのカード */
+.diary-entry {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* 上の行:左に日付、右に編集・削除 */
+.diary-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* 本文:Enterの改行をそのまま表示し、長い文字列は枠の端で折り返す */
+.diary-body {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.8;
 }

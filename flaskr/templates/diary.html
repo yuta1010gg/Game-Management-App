@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>ゲーム管理アプリ - 日記</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <h1>ゲーム管理アプリ</h1>
+
+        <h2>日記：{{ game[1] }}</h2>
+
+        <p>
+            <a href="{{ url_for('detail', game_id=game[0]) }}">ゲームの詳細へ</a> /
+            <a href="{{ url_for('index') }}">一覧に戻る</a>
+        </p>
+
+        {% if msg %}
+            <p class="msg">{{ msg }}</p>
+        {% endif %}
+
+        <h3>日記を書く</h3>
+
+        <form method="post" action="{{ url_for('diary_add', game_id=game[0]) }}">
+            <table border="1">
+                <tr>
+                    <th>日付</th>
+                    <td><input type="date" name="diary_date" value="{{ today }}"></td>
+                </tr>
+                <tr>
+                    <th>本文</th>
+                    <td><textarea name="body" rows="5" cols="50" required></textarea></td>
+                </tr>
+            </table>
+
+            <br>
+            <input type="submit" value="保存">
+        </form>
+
+        <h3>これまでの日記</h3>
+
+        {% if not diaries %}
+            <p>まだ日記がありません。最初の1行を書いてみましょう。</p>
+        {% else %}
+            {% for diary_id, diary_date, body in diaries %}
+                <div class="diary-entry">
+                    <div class="diary-head">
+                        <strong>{{ diary_date }}</strong>
+                        <span>
+                            <a href="{{ url_for('diary_edit', diary_id=diary_id) }}">編集</a>
+                            <form method="post"
+                                  action="{{ url_for('diary_delete', diary_id=diary_id) }}"
+                                  style="display:inline;"
+                                  onsubmit="return confirm('この日記を削除しますか？');">
+                                <input type="submit" value="削除">
+                            </form>
+                        </span>
+                    </div>
+                    <div class="diary-body">{{ body }}</div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <br>
+        <a href="{{ url_for('index') }}">一覧に戻る</a>
+    </body>
+</html>

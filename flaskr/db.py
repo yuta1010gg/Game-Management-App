@@ -441,3 +441,100 @@ def get_user_by_username(username):
     ).fetchone()
     con.close()
     return row
+
+# ============================================================
+# 9. diaries(ゲームごとの日記)
+# ============================================================
+# 1つのゲームに、日記を何件でも書ける(「1つのゲーム → 多くの日記」の関係)。
+# 同じ日に何回書いてもよいので、日付には UNIQUE を付けていない。
+#
+# どの関数も user_id を条件に入れている。
+# → ログイン中の本人の日記しか、見たり直したり消したりできない。
+
+# diaries テーブルを作る
+# (games と users を参照するので、この2つより後に作ること)
+def create_diaries_table():
+    con = sqlite3.connect(DATABASE)
+    con.execute("PRAGMA foreign_keys = ON")
+
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS diaries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id INTEGER NOT NULL,       -- どのゲームの日記か(gamesテーブルのID)
+            user_id INTEGER NOT NULL,       -- 持ち主(usersテーブルのID)
+            diary_date TEXT NOT NULL,       -- 日記の日付('2026-11-11' の形の文字列)
+            body TEXT NOT NULL,             -- 本文
+            FOREIGN KEY (game_id) REFERENCES games(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+
+    con.commit()
+    con.close()
+    
+    
+    # 日記を1件追加する
+def add_diary(game_id, user_id, diary_date, body):
+    con = sqlite3.connect(DATABASE)
+    con.execute("PRAGMA foreign_keys = ON")
+    con.execute(
+        'INSERT INTO diaries (game_id, user_id, diary_date, body) VALUES (?, ?, ?, ?)',
+        [game_id, user_id, diary_date, body]
+    )
+    con.commit()
+    con.close()
+    
+    # 1つのゲームの日記を、新しい順に全部取得する
+# 戻り値: [(id, diary_date, body), ...]
+#   ・日付が新しい順。同じ日なら、あとから書いた方(idが大きい方)が上。
+def get_diaries(game_id, user_id):
+    con = sqlite3.connect(DATABASE)
+    rows = con.execute(
+        'SELECT id, diary_date, body FROM diaries WHERE game_id = ? AND user_id = ? ORDER BY diary_date DESC, id DESC',
+        [game_id, user_id]
+    ).fetchall()
+    con.close()
+    return rows
+
+# 日記を1件取得する(編集ページ用)
+# 戻り値: (id, game_id, diary_date, body) のタプル。
+#         無い・他の人の日記なら None
+#   ・game_id も返すのは、編集や削除のあとに「そのゲームの日記ページ」へ戻すため。
+def get_diary(diary_id, user_id):
+    con = sqlite3.connect(DATABASE)
+    row = con.execute(
+        'SELECT id, game_id, diary_date, body FROM diaries WHERE id = ? AND user_id = ?',
+        [diary_id, user_id]
+    ).fetchone()
+    con.close()
+    return row
+
+# 日記を更新する(日付と本文を上書き)
+def update_diary(diary_id, user_id, diary_date, body):
+    con = sqlite3.connect(DATABASE)
+    con.execute(
+        'UPDATE diaries SET diary_date = ?, body = ? WHERE id = ? AND user_id = ?',
+        [diary_date, body, diary_id, user_id]
+    )
+    con.commit()
+    con.close()
+    
+    # 日記を1件削除する
+def delete_diary(diary_id, user_id):
+    con = sqlite3.connect(DATABASE)
+    con.execute('DELETE FROM diaries WHERE id = ? AND user_id = ?', [diary_id, user_id])
+    con.commit()
+    con.close()
+    
+# ゲームごとの日記の件数を取得する(一覧ページの「📖 3件」用)
+# 戻り値: {game_id: 件数} の辞書  例: {1: 3, 4: 1}
+#   ・日記が1件も無いゲームは辞書に入らない。
+#     → 使う側は diary_counts.get(game_id, 0) で「無ければ0」にする。
+def get_diary_counts(user_id):
+    con = sqlite3.connect(DATABASE)
+    rows = con.execute(
+        'SELECT game_id, COUNT(*) FROM diaries WHERE user_id = ? GROUP BY game_id',
+        [user_id]
+    ).fetchall()
+    con.close()
+    return dict(rows)    
