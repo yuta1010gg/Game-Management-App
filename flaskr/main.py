@@ -196,11 +196,6 @@ def index():
         # 評価が低い順。※ASCだと NULL(評価なし)が先頭に来る
         order_sql = 'games.rating ASC, games.id DESC'
 
-    elif order == 'favorite':
-        # お気に入りを先頭に。
-        # 「games.favorite = 1」は、お気に入りなら 1、そうでなければ 0 になる式。
-        # DESC(大きい順)なので、1(お気に入り)が先に並ぶ。
-        order_sql = 'games.favorite = 1 DESC, games.id ASC'
 
     elif order == 'purchase_new':
         # 購入日が新しい順。
@@ -260,7 +255,29 @@ def index():
     # ----- (5) データベースから一覧を取得する -----
     # games には platform_id=3 のような「数字」しか入っていない。
     # JOIN で platforms などの表と結びつけ、数字を名前(「PC」など)に置き換えて取り出す。
+    
+    # ----- お気に入りのゲームを取得する -----
+# お気に入り用に別途データを取得する。
+# 通常のゲーム一覧とは別に取得するので、
+# お気に入りのゲームは通常の一覧から消えない。
+
     con = sqlite3.connect(DATABASE)
+    # ----- お気に入りのゲームを取得する -----
+    # お気に入り用に別途データを取得する。
+    # 通常のゲーム一覧とは別に取得するので、
+    # お気に入りのゲームは通常の一覧から消えない。
+    favorite_rows = con.execute('''
+            SELECT games.id, games.title, platforms.name, statuses.name, genres.name,
+            games.rating, games.play_time, games.purchase_date,
+            games.memo, games.favorite, games.image
+            FROM games
+            JOIN platforms ON games.platform_id = platforms.id
+            JOIN statuses ON games.status_id = statuses.id
+            JOIN genres ON games.genre_id = genres.id
+            WHERE games.user_id = ? AND games.favorite = 1
+            ORDER BY games.id DESC
+        ''', [user_id]).fetchall()
+    
     db_games = con.execute(f'''
         SELECT games.id, games.title, platforms.name, statuses.name, genres.name,
         games.rating, games.play_time, games.purchase_date, games.memo,games.favorite,games.image
@@ -297,6 +314,25 @@ def index():
     # ゲームごとの日記の件数 {game_id: 件数}。日記が無いゲームは辞書に無いので、
     # 下で .get(id, 0) として「無ければ0」にしている。
     diary_counts = get_diary_counts(user_id)
+    
+    # ★ お気に入り用のデータを作る
+    favorite_games = []
+    
+    for row in favorite_rows:
+        favorite_games.append({
+            'id': row[0],
+            'title': row[1],
+            'platform': row[2],
+            'status': row[3],
+            'genre': row[4],
+            'rating': row[5],
+            'play_time': row[6],
+            'purchase_date': row[7],
+            'memo': row[8],
+            'favorite': row[9],
+            'image': row[10],
+            'diary_count': diary_counts.get(row[0], 0)
+        })
 
     for row in db_games:
         games.append({
@@ -322,6 +358,7 @@ def index():
     return render_template(
         'index.html',
         games=games,                   # 一覧に表示するゲーム
+        favorite_games=favorite_games,
         page=page,                     # 現在のページ番号
         total_pages=total_pages,       # 全ページ数
         q=q,                           # 検索キーワード
