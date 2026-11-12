@@ -1,15 +1,15 @@
 # ============================================================
 # db.py ― データベース(SQLite)の操作を担当するファイル
 # ============================================================
-# main.py(接客係)から頼まれて、データの作成・取得・追加・削除をする
+# 各ファイル(games.py・diary.py などの「接客係」)から頼まれて、データの作成・取得・追加・削除をする
 # 「倉庫の管理人」の役目です。
 #
-# 【このアプリのテーブル(表)は5つ】
+# 【このアプリのテーブル(表)は7つ】
 #
 #   platforms ─┐   選択肢のもとになる表(マスタ表)
-#   statuses  ─┼─→ games   ← ゲーム本体の表
-#   genres    ─┤
-#   users     ─┘            ← ログイン用のユーザー表(ゲームの持ち主)
+#   statuses  ─┼─→ games ───→ diaries   ← ゲームごとの日記
+#   genres    ─┤     ↑   └───→ events    ← カレンダーの予定(game_id は空でもよい)
+#   users     ─┴─────┴─────────┘          ← ログイン用のユーザー表(持ち主)
 #
 #   ・platforms : Switch, PS5 などのプラットフォーム
 #   ・statuses  : 未プレイ, プレイ中 などのプレイ状況
@@ -18,6 +18,10 @@
 #   ・games     : ゲームの情報。プラットフォームなどは「名前」ではなく
 #                 「ID(数字)」で持つ。
 #                 → 名前の表記ゆれを防げ、名前を直すときもマスタ表の1か所で済む。
+#   ・diaries   : ゲームごとの日記。game_id で「どのゲームの日記か」を持つ。
+#                 1つのゲームに、日記を何件でも書ける。
+#   ・events    : カレンダーの予定。開始日〜終了日で、日付をまたげる。
+#                 game_id は空でもよい(ゲーム全般の予定)。
 #
 # 【どの関数も基本の流れは同じ】
 #   con = sqlite3.connect(DATABASE)   ① DBファイルに接続(無ければ自動で作られる)
@@ -28,7 +32,7 @@
 
 import sqlite3
 
-# 使用するSQLiteデータベースのファイル名(main.py と同じファイルを指す)
+# 使用するSQLiteデータベースのファイル名(games.py が、ここの DATABASE を借りて使っている)
 DATABASE = 'database.db'
 
 
@@ -45,7 +49,7 @@ def create_games_table():
     #  本当に効くのは INSERT / UPDATE をする側。)
     con.execute("PRAGMA foreign_keys = ON")
     # IF NOT EXISTS : すでにテーブルがあればエラーにせず何もしない
-    # (何度呼び出しても安全。main.py の index() で毎回呼ばれている)
+    # (何度呼び出しても安全。games.py の index() で毎回呼ばれている)
     #
     # ★注意:すでにテーブルがある場合、この文は「何もしない」ので、
     #   あとから列(rating など)を足しても既存のDBには反映されない。
@@ -225,11 +229,11 @@ def get_genres():
 # 戻り値: 次の順番のタプル(該当するゲームがなければ None)
 #   (id, title, platform_id, status_id, genre_id, rating, memo, purchase_date, play_time, image)
 #    [0]  [1]       [2]          [3]       [4]      [5]    [6]       [7]          [8]       [9]
-# ※ 一覧(main.py の index)で使う順番とは違うので注意。
+# ※ 一覧(games.py の index)で使う順番とは違うので注意。
 # ※ favorite は含まれていない(お気に入りは一覧のチェックボックスで切り替えるため)。
 # ※ ここで返すのは名前ではなく「ID」。編集フォームのプルダウンで
 #    「今どれが選ばれているか」を判定するにはIDが必要なため。
-# main.py の detail() と update() で、None かどうかを判定している。
+# games.py の detail() と update() などで、None かどうかを判定している。
 def get_game(game_id,user_id):
     con = sqlite3.connect(DATABASE)
     row = con.execute(
@@ -310,7 +314,7 @@ def get_platform_counts(user_id):
 
 # 全体のまとめを取得
 # 戻り値: (登録本数, プレイ時間の合計, 評価の平均) の1行
-#   ・ゲームが0本のとき、SUM と AVG は None になる(main.py で 0 に直している)
+#   ・ゲームが0本のとき、SUM と AVG は None になる(stats.py で 0 に直している)
 #   ・AVG(rating) は、評価が未入力(NULL)のゲームを除いて平均する
 def get_summary(user_id):
     con =sqlite3.connect(DATABASE)
@@ -333,7 +337,7 @@ def get_summary(user_id):
 #
 # この辞書は「安全の関門」にもなっている。下の関数はテーブル名をSQL文に
 # 直接埋め込む(テーブル名は ? で渡せないため)ので、
-# main.py 側で「table が MASTERS にあるか」を必ず確認してから呼んでいる。
+# master.py 側で「table が MASTERS にあるか」を必ず確認してから呼んでいる。
 MASTERS = {
     'genres': {'label': 'ジャンル', 'column': 'genre_id'},
     'platforms': {'label': 'プラットフォーム', 'column': 'platform_id'},
@@ -417,7 +421,7 @@ def create_users_table():
 
 
 # ユーザーを追加する。成功なら True、ユーザー名がかぶっていたら False
-# password_hash には、変換済みのパスワードを渡す(main.py の signup() で変換している)。
+# password_hash には、変換済みのパスワードを渡す(auth.py の signup() で変換している)。
 def add_user(username, password_hash):
     con = sqlite3.connect(DATABASE)
     try:
@@ -538,3 +542,152 @@ def get_diary_counts(user_id):
     ).fetchall()
     con.close()
     return dict(rows)    
+
+
+# ============================================================
+# 10. events(カレンダーの予定)
+# ============================================================
+# カレンダーに書き込む予定。「開始日〜終了日」で、日付をまたげる。
+#   ・終了日が空のときは、開始日と同じ日を入れて保存する(= 1日だけの予定)。
+#     こうしておくと、1日だけの予定も期間のある予定も、同じ作りで扱える。
+#   ・game_id は空でもよい。空のときは「ゲーム全般の予定」(セール・大会など)。
+#
+# 日付は '2026-11-12' の形の文字列で保存する。この形なら、文字列のまま
+# 日付の前後を比べられる(例: '2026-11-12' <= '2026-11-20' が正しく成り立つ)。
+#
+# どの関数も user_id を条件に入れている(自分の予定だけを扱うため)。
+
+# events テーブルを作る
+# (users と games を参照するので、この2つより後に作ること)
+def create_events_table():
+    con = sqlite3.connect(DATABASE)
+    con.execute("PRAGMA foreign_keys = ON")
+
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,       -- 持ち主(usersテーブルのID)
+            game_id INTEGER,                -- どのゲームの予定か(空でもOK = ゲーム全般の予定)
+            title TEXT NOT NULL,            -- 予定の名前
+            start_date TEXT NOT NULL,       -- 開始日('2026-11-12' の形の文字列)
+            end_date TEXT NOT NULL,         -- 終了日(1日だけの予定は、開始日と同じ)
+            memo TEXT,                      -- メモ(空でもOK)
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (game_id) REFERENCES games(id)
+        )
+    """)
+
+    con.commit()
+    con.close()
+
+
+# 予定を1件追加する
+def add_event(user_id, game_id, title, start_date, end_date, memo):
+    con = sqlite3.connect(DATABASE)
+    con.execute("PRAGMA foreign_keys = ON")
+    con.execute(
+        'INSERT INTO events (user_id, game_id, title, start_date, end_date, memo) VALUES (?, ?, ?, ?, ?, ?)',
+        [user_id, game_id, title, start_date, end_date, memo]
+    )
+    con.commit()
+    con.close()
+
+
+# 予定を1件取得する(編集ページ用)
+# 戻り値: (id, game_id, title, start_date, end_date, memo) のタプル。
+#         無い・他の人の予定なら None
+def get_event(event_id, user_id):
+    con = sqlite3.connect(DATABASE)
+    row = con.execute(
+        'SELECT id, game_id, title, start_date, end_date, memo FROM events WHERE id = ? AND user_id = ?',
+        [event_id, user_id]
+    ).fetchone()
+    con.close()
+    return row
+
+
+# 予定を更新する
+def update_event(event_id, user_id, game_id, title, start_date, end_date, memo):
+    con = sqlite3.connect(DATABASE)
+    con.execute("PRAGMA foreign_keys = ON")
+    con.execute(
+        'UPDATE events SET game_id = ?, title = ?, start_date = ?, end_date = ?, memo = ? WHERE id = ? AND user_id = ?',
+        [game_id, title, start_date, end_date, memo, event_id, user_id]
+    )
+    con.commit()
+    con.close()
+
+
+# 予定を1件削除する
+def delete_event(event_id, user_id):
+    con = sqlite3.connect(DATABASE)
+    con.execute('DELETE FROM events WHERE id = ? AND user_id = ?', [event_id, user_id])
+    con.commit()
+    con.close()
+
+
+# ============================================================
+# 11. カレンダー用の取得(指定した期間の、予定・購入日・日記)
+# ============================================================
+# 3つとも「first_date 〜 last_date」('2026-11-01' の形の文字列)に入るものを取り出す。
+# カレンダーでは、1か月ぶんをまとめて1回で取り出して、日付ごとに振り分ける
+# (マスごとに問い合わせると、40回近く問い合わせることになって遅いため)。
+
+# 期間に入っている予定を取得する
+# 戻り値: [(id, title, start_date, end_date, memo, game_id, ゲーム名), ...]
+#   ・「予定の期間が、見ている期間と1日でも重なっているもの」を取り出す。
+#     = 予定の開始日 <= 期間の最後  かつ  予定の終了日 >= 期間の最初
+#     (月をまたぐ予定も、どちらの月にも出る)
+#   ・LEFT JOIN なので、ゲームを指定していない予定も消えない(ゲーム名は None)。
+def get_events_between(user_id, first_date, last_date):
+    con = sqlite3.connect(DATABASE)
+    rows = con.execute('''
+        SELECT events.id, events.title, events.start_date, events.end_date,
+               events.memo, events.game_id, games.title
+        FROM events
+        LEFT JOIN games ON events.game_id = games.id
+        WHERE events.user_id = ? AND events.start_date <= ? AND events.end_date >= ?
+        ORDER BY events.start_date, events.id
+    ''', [user_id, last_date, first_date]).fetchall()
+    con.close()
+    return rows
+
+
+# 期間に入っている「ゲームの購入日」を取得する
+# 戻り値: [(game_id, ゲーム名, 購入日), ...]
+#   ・購入日が空(NULL)のゲームは、BETWEEN に当てはまらないので出てこない。
+def get_purchases_between(user_id, first_date, last_date):
+    con = sqlite3.connect(DATABASE)
+    rows = con.execute(
+        'SELECT id, title, purchase_date FROM games WHERE user_id = ? AND purchase_date BETWEEN ? AND ? ORDER BY purchase_date, id',
+        [user_id, first_date, last_date]
+    ).fetchall()
+    con.close()
+    return rows
+
+
+# 期間に入っている日記を取得する
+# 戻り値: [(日記のid, game_id, ゲーム名, 日付, 本文), ...]
+def get_diaries_between(user_id, first_date, last_date):
+    con = sqlite3.connect(DATABASE)
+    rows = con.execute('''
+        SELECT diaries.id, diaries.game_id, games.title, diaries.diary_date, diaries.body
+        FROM diaries
+        JOIN games ON diaries.game_id = games.id
+        WHERE diaries.user_id = ? AND diaries.diary_date BETWEEN ? AND ?
+        ORDER BY diaries.diary_date, diaries.id
+    ''', [user_id, first_date, last_date]).fetchall()
+    con.close()
+    return rows
+
+
+# 予定フォームの「ゲーム」プルダウン用に、自分のゲームの一覧を取得する
+# 戻り値: [(id, ゲーム名), ...](名前順)
+def get_game_choices(user_id):
+    con = sqlite3.connect(DATABASE)
+    rows = con.execute(
+        'SELECT id, title FROM games WHERE user_id = ? ORDER BY title',
+        [user_id]
+    ).fetchall()
+    con.close()
+    return rows

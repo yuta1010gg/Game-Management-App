@@ -339,3 +339,190 @@ form[method="post"] + form[method="post"] {
     overflow-wrap: anywhere;
     line-height: 1.8;
 }
+
+
+/* ---------- カレンダーページ ---------- */
+/* 上の「◀ 前の月 / 2026年11月 / 次の月 ▶ / 今月」 */
+.cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 8px 0 12px;
+}
+
+.cal-nav strong {
+    font-size: 1.15rem;
+}
+
+/* 日付の表。表(table)ではなく「7列のグリッド」で作っている
+   (表に使っている縞模様やホバーの設定が、カレンダーに影響しないようにするため) */
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));   /* 7等分(はみ出さない) */
+    gap: 1px;                                           /* マスの間の線 */
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.cal-grid a {
+    margin-right: 0;       /* 共通のリンク設定(右の余白)を打ち消す */
+}
+
+/* 曜日の見出し */
+.cal-head {
+    background: var(--primary);
+    color: #fff;
+    text-align: center;
+    padding: 6px 0;
+    font-weight: bold;
+}
+
+/* 日付1マス */
+.cal-cell {
+    background: var(--card);
+    min-height: 112px;
+    padding: 4px 5px 6px;
+    min-width: 0;          /* 長い予定名でマスが広がらないようにする */
+}
+
+/* 前後の月のマス(日付だけを、薄く表示する) */
+.cal-cell.other {
+    background: var(--stripe);
+}
+
+.cal-cell.other .cal-daynum {
+    color: var(--muted);
+    opacity: 0.6;
+}
+
+/* 日付の数字 */
+.cal-daynum {
+    display: inline-block;
+    min-width: 1.7em;
+    text-align: center;
+    font-weight: bold;
+    border-radius: 999px;
+    padding: 0 4px;
+    color: var(--text);
+}
+
+a.cal-daynum:hover {
+    text-decoration: none;
+    background: var(--hover);
+}
+
+.cal-cell.sun .cal-daynum { color: var(--danger); }    /* 日曜は赤 */
+.cal-cell.sat .cal-daynum { color: var(--primary); }   /* 土曜は青 */
+
+/* 今日は、日付を丸く塗りつぶす */
+.cal-cell.today .cal-daynum {
+    background: var(--primary);
+    color: #fff;
+}
+
+/* 詳細を開いている日は、枠をつける */
+.cal-cell.selected {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+}
+
+/* マスの中の1項目(予定・購入・日記) */
+.cal-item {
+    display: block;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    padding: 1px 5px;
+    margin-top: 3px;
+    border-radius: 4px;
+    background: var(--hover);
+    border-left: 3px solid var(--primary);      /* 予定の色 */
+    color: var(--text);
+    white-space: nowrap;                        /* 長い名前は、1行で切って… */
+    overflow: hidden;
+    text-overflow: ellipsis;                    /* 最後に「…」を付ける */
+}
+
+.cal-item.purchase { border-left-color: #e8a317; }   /* 購入は黄色 */
+.cal-item.diary    { border-left-color: #2fa56f; }   /* 日記は緑 */
+
+/* 「もっと見る(+2)」 */
+.cal-more {
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 3px;
+}
+
+.cal-legend {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 8px 0 0;
+}
+
+/* ページ下の「その日の詳細」 */
+.cal-detail {
+    margin-top: 24px;
+}
+
+.cal-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+}
+
+.cal-list li {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+}
+
+.cal-sub {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 10px 0 6px;
+}
+
+/* 予定のメモ・日記の本文:改行をそのまま表示し、長い文字列は端で折り返す */
+.cal-memo {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 4px 0;
+}
+
+.cal-empty {
+    color: var(--muted);
+}
+
+/* エラーメッセージ(予定の編集などで使う) */
+.error {
+    padding: 10px 14px;
+    background: var(--hover);
+    border-left: 4px solid var(--danger);
+    border-radius: 4px;
+    color: var(--danger);
+}
+
+/* スマホなど画面が狭いとき:マスを小さく、文字も小さくする */
+@media (max-width: 700px) {
+    .cal-cell {
+        min-height: 78px;
+        padding: 2px;
+    }
+
+    .cal-item {
+        font-size: 0.68rem;
+        padding: 0 3px;
+    }
+
+    /* マスが狭いので、項目は「アイコンだけ」にする(名前は日付を押すと下に出る) */
+    .cal-text {
+        display: none;
+    }
+}

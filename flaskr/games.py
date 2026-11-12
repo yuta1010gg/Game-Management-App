@@ -1,160 +1,40 @@
 # ============================================================
-# main.py ― 「どのURLにアクセスされたら何をするか」を決めるファイル
+# games.py ― ゲームの一覧・登録・更新・削除・詳細・お気に入りを担当するファイル
 # ============================================================
-# このアプリは「ゲーム管理アプリ」です。
-# ブラウザからのリクエスト(URLへのアクセス)を受け取り、
-#   ① 必要ならデータベース(SQLite)を読み書きして
-#   ② HTMLテンプレート(templatesフォルダ)に値を渡して画面を作る
-# という流れで動きます。
-#
-# 【URL一覧】
+# 【URL】
 #   /                          一覧ページ(検索・絞り込み・並び替え・ページ分け)
 #   /form                      新規登録フォームの表示
 #   /register   (POST)         新規登録の処理
 #   /game/<id>                 詳細ページ(編集フォームを兼ねる)
 #   /update/<id> (POST)        更新の処理
 #   /delete/<id> (POST)        削除の処理
-#   /stats                     統計ページ
 #   /favorite/<id> (POST)      お気に入りの切り替え
-#   /master                    マスタ管理ページ(プラットフォーム・ジャンルの選択肢の管理)
-#   /master/<table>/add (POST)            マスタの追加
-#   /master/<table>/delete/<id> (POST)    マスタの削除
-#   /signup                    ユーザー登録
-#   /login                     ログイン
-#   /logout     (POST)         ログアウト
-#
-# 【GETとPOSTの使い分け】
-#   GET  = 画面を見るだけ(データは変えない)
-#   POST = データを変更する(登録・更新・削除)
-#   → 削除などをPOSTだけにしておくと、URLを開いただけでは消えません。
-#
-# 【ログインについて】
-#   ログインすると session['user_id'] に自分のIDが入る。
-#   ゲームのデータは user_id で持ち主を区別し、自分のゲームだけを扱う。
-#   ★注意:@login_required が付いているのは、今のところ index( / )だけ。
-#     他のページはログインしていなくても開けてしまい、
-#     session['user_id'] が無いのでエラー(500)になる。
-#     他のページにも @login_required を付けると、ログイン画面へ案内できる。
-# ============================================================
 
-
-# ------------------------------------------------------------
-# 1. 必要な部品の読み込み(import)
-# ------------------------------------------------------------
-
-# Flaskの機能
-#   render_template : HTMLテンプレートに値を埋め込んで画面を作る
-#   request         : ブラウザから届いたデータ(URLの?以降やフォーム入力)を読む
-#   redirect        : 別のURLへ移動させる
-#   url_for         : 「関数名」からURLを作る(URLを直接書かずに済む)
-#   abort           : エラー(404など)を返して処理を打ち切る
-#   session         : ログイン中のユーザー情報などを、ブラウザごとに記憶しておく場所
 from flask import render_template, request, redirect, url_for, abort, session
-from functools import wraps    # デコレータを作るときに使う
+
+# SQLiteを直接操作するための標準ライブラリ
+import sqlite3
 
 # __init__.py で作った Flask アプリ本体。
 # これを使って、下の @app.route(...) でURLと関数を結びつける。
 from flaskr import app
 
-# SQLiteを直接操作するための標準ライブラリ
-import sqlite3
+# auth.py:ログインしていない人をログイン画面へ案内するデコレータ
+from flaskr.auth import login_required
+# images.py:画像の保存と削除
+from flaskr.images import save_image, delete_image
 
-import os      # フォルダやファイルのパスを扱う
-import uuid    # ランダムなファイル名を作る
-from datetime import date    # 今日の日付を取得したり、日付の形を確認したりする
-
-# パスワードの変換(ハッシュ化)と照合の道具
-#   generate_password_hash : パスワードを、元に戻せない文字列に変換する
-#   check_password_hash    : 入力されたパスワードが、変換済みの文字列と合うか調べる
-from werkzeug.security import generate_password_hash, check_password_hash
-
-# ここから下は db.py(データベース担当のファイル)で作った関数を借りている
-# ユーザーの追加と、ユーザー名での取得(登録・ログイン用)
-from flaskr.db import add_user, get_user_by_username
-from flaskr.db import create_games_table
+# db.py(データベース担当のファイル)で作った関数・設定を借りている
+#   DATABASE : 使用するSQLiteデータベースのファイル名
+from flaskr.db import DATABASE, create_games_table
 # 各マスタ(プラットフォーム・プレイ状況・ジャンル)の一覧取得と、ゲーム1件の取得
 from flaskr.db import get_platforms, get_game, get_statuses, get_genres
-# 統計ページ用の集計関数
-from flaskr.db import get_status_counts, get_genre_counts, get_platform_counts, get_summary
-# マスタ管理用:MASTERS は「管理してよいテーブルの一覧(辞書)」、
-# 他の3つは一覧取得・追加・削除の関数
-from flaskr.db import MASTERS, get_master_items, add_master_item, delete_master_item
-# 日記用:追加・一覧・1件取得・更新・削除と、ゲームごとの件数
-from flaskr.db import add_diary, get_diaries, get_diary, update_diary, delete_diary, get_diary_counts
-
-# 使用するSQLiteデータベースのファイル名
-# (db.py にも同じものがある。同じファイルを指している)
-DATABASE = 'database.db'
-
-# 画像の保存先フォルダ(static フォルダの中の uploads)
-UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
-
-# 受け付ける拡張子(これ以外のファイルは保存しない)
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-
-# アップロードできる最大サイズ(5MB)。超えるとエラー画面になる
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
-
-
-# ------------------------------------------------------------
-# 画像まわりの補助関数
-# ------------------------------------------------------------
-
-# 画像を保存して、保存したファイル名を返す関数
-# 画像が選ばれていない・画像ではないときは None を返す
-def save_image(file):
-    # 画像を選ばなかったとき、ブラウザは「ファイル名が空のファイル」を送ってくる
-    if file is None or file.filename == '':
-        return None
-
-    # 拡張子(最後の「.」より後ろ)を取り出して小文字にする
-    if '.' not in file.filename:
-        return None
-    ext = file.filename.rsplit('.', 1)[1].lower()
-
-    # 許可した拡張子でなければ保存しない
-    if ext not in ALLOWED_EXTENSIONS:
-        return None
-
-    # 保存先フォルダが無ければ作る(あれば何もしない)
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-    # 元のファイル名は使わず、ランダムな名前にする
-    # (同名ファイルの上書きや、変な文字によるトラブルを防ぐため)
-    filename = uuid.uuid4().hex + '.' + ext
-
-    file.save(os.path.join(UPLOAD_FOLDER, filename))
-    return filename
-
-
-# 保存済みの画像ファイルを削除する関数
-# filename が None や空のとき、ファイルが存在しないときは何もしない
-def delete_image(filename):
-    if not filename:
-        return
-    path = os.path.join(UPLOAD_FOLDER, filename)
-    if os.path.exists(path):
-        os.remove(path)
+# ゲームごとの日記の件数(一覧の「📖 3件」用)
+from flaskr.db import get_diary_counts
 
 
 # ============================================================
-# ログイン必須にするための「デコレータ」
-# ============================================================
-# 各ページの関数の上に @login_required と書くと、
-# 「ログインしていなければ、ログイン画面へ移動させる」処理が付く。
-def login_required(view):
-    @wraps(view)    # 元の関数の名前などを引き継ぐ(url_for などが正しく動くように必要)
-    def wrapped(*args, **kwargs):
-        # ログイン時に session['user_id'] を入れたので、無ければ未ログイン
-        if 'user_id' not in session:
-            return redirect(url_for('login', msg='ログインしてください'))
-        # ログイン済みなら、元のページの処理をそのまま実行する
-        return view(*args, **kwargs)
-    return wrapped
-
-
-# ============================================================
-# 2. 一覧ページ ( / )
+# 一覧ページ ( / )
 #    このファイルでいちばん複雑な部分。順番に読むとわかりやすい。
 # ============================================================
 @app.route('/')
@@ -373,7 +253,7 @@ def index():
 
 
 # ============================================================
-# 3. 新規登録フォームの表示 ( /form )
+# 新規登録フォームの表示 ( /form )
 # ============================================================
 @app.route('/form')
 def form():
@@ -391,7 +271,7 @@ def form():
 
 
 # ============================================================
-# 4. 新規登録処理 ( /register ) ― フォームからのPOSTを受け取る
+# 新規登録処理 ( /register ) ― フォームからのPOSTを受け取る
 # ============================================================
 @app.route('/register',methods=['post'])
 def register():
@@ -444,7 +324,7 @@ def register():
 
 
 # ============================================================
-# 5. 削除処理 ( /delete/<id> )
+# 削除処理 ( /delete/<id> )
 # ============================================================
 # <int:game_id> : URLの数字部分を整数として game_id で受け取る。
 #                 例) /delete/3 なら game_id = 3
@@ -458,6 +338,7 @@ def delete(game_id):
     # WHERE id = ? AND user_id = ? で「自分の、このIDの1件だけ」を消す。
     # (WHEREを忘れると全件消えるので注意)
     con.execute('DELETE FROM diaries WHERE game_id = ? AND user_id = ?', [game_id, user_id])
+    con.execute('DELETE FROM events WHERE game_id = ? AND user_id = ?', [game_id, user_id])
     con.execute('DELETE FROM games WHERE id = ? AND user_id = ?', [game_id, user_id])
     con.commit()
     con.close()
@@ -470,7 +351,7 @@ def delete(game_id):
 
 
 # ============================================================
-# 6. 更新処理 ( /update/<id> ) ― 詳細ページの編集フォームからのPOST
+# 更新処理 ( /update/<id> ) ― 詳細ページの編集フォームからのPOST
 # ============================================================
 @app.route('/update/<int:game_id>', methods=['POST'])
 def update(game_id):
@@ -523,7 +404,7 @@ def update(game_id):
 
 
 # ============================================================
-# 7. 詳細ページ ( /game/<id> ) ― 編集フォームを兼ねる
+# 詳細ページ ( /game/<id> ) ― 編集フォームを兼ねる
 # ============================================================
 @app.route('/game/<int:game_id>')
 def detail(game_id):
@@ -541,40 +422,7 @@ def detail(game_id):
 
 
 # ============================================================
-# 8. 統計ページ ( /stats )
-# ============================================================
-@app.route('/stats')
-def stats():
-    # db.py の関数で、ログイン中のユーザーのゲームを集計する。
-    # 戻り値は [('未プレイ', 2), ('クリア済み', 3), ...] のような
-    # 「(名前, 本数)」のリスト。
-    user_id = session['user_id']
-    status_counts = get_status_counts(user_id)       # プレイ状況ごとの本数
-    genre_counts = get_genre_counts(user_id)         # ジャンルごとの本数
-    platform_counts = get_platform_counts(user_id)   # プラットフォームごとの本数
-
-    # 全体のまとめ:登録本数・合計プレイ時間・平均評価
-    total, total_time, avg_rating = get_summary(user_id)
-    total_time = total_time or 0   # ゲームが0本だと None になるので 0 にする
-
-    # [('未プレイ', 2), ('クリア済み', 3), ...] を辞書に変換して、
-    # 「クリア済み」の本数だけ取り出す(無ければ0)。
-    cleared = dict(status_counts).get('クリア済み', 0)
-
-    return render_template(
-        'stats.html',
-        total=total,
-        cleared=cleared,
-        total_time=total_time,
-        avg_rating=avg_rating,
-        status_counts=status_counts,
-        genre_counts=genre_counts,
-        platform_counts=platform_counts
-    )
-
-
-# ============================================================
-# 9. お気に入りの切り替え ( /favorite/<id> )
+# お気に入りの切り替え ( /favorite/<id> )
 # ============================================================
 # 一覧のチェックボックスから送られる。
 @app.route('/favorite/<int:game_id>', methods=['POST'])
@@ -591,253 +439,3 @@ def toggle_favorite(game_id):
     # そこへ戻すので、検索条件やページ位置を保ったまま一覧に戻れる。
     # (取得できないときは、条件なしの一覧へ)
     return redirect(request.referrer or url_for('index'))
-
-
-# ============================================================
-# 10. マスタ管理(プラットフォーム・ジャンルの選択肢の管理)
-# ============================================================
-# 「マスタ」とは、プルダウンの選択肢のもとになるデータのこと。
-# MASTERS は db.py で定義された辞書で、管理してよいテーブルと
-# その表示名(label)をまとめたもの。
-# (プレイ状況は MASTERS に無いので、ここでは管理しない)
-
-# --- マスタ管理ページの表示 ( /master ) ---
-@app.route('/master')
-def master():
-    # 追加・削除の結果メッセージ(リダイレクト時にURLで受け渡される)
-    msg = request.args.get('msg', '')
-    sections = []
-    # MASTERS の中身を1つずつ取り出し、画面で表示しやすい形に整える
-    for table, info in MASTERS.items():
-        sections.append({
-            'table': table,                      # テーブル名(追加・削除のURLに使う)
-            'label': info['label'],              # 画面に出す名前
-            'rows': get_master_items(table)      # そのテーブルの項目一覧
-        })
-    return render_template('master.html', sections=sections, msg=msg)
-
-
-# --- 追加 ( /master/<table>/add ) ---
-# <table> には URL の文字列が入る。例) /master/platforms/add
-@app.route('/master/<table>/add', methods=['POST'])
-def master_add(table):
-    # テーブル名はSQLの ? で渡せないので、SQL文に直接使うことになる。
-    # そのため、ユーザーが好きな名前を指定できないよう、
-    # 許可したテーブル(MASTERS)以外は404エラーにする(安全対策)。
-    if table not in MASTERS:
-        abort(404)
-
-    name = request.form.get('name', '').strip()
-    if not name:
-        # 空欄ならメッセージ付きでマスタ管理ページへ戻す
-        return redirect(url_for('master', msg='名前を入力してください'))
-
-    # add_master_item は、追加できれば True、
-    # すでに同じ名前があれば False を返す(db.py 側の仕様)
-    if add_master_item(table, name):
-        msg = f'「{name}」を追加しました'
-    else:
-        msg = f'「{name}」はすでに登録されています'
-    return redirect(url_for('master', msg=msg))
-
-
-# --- 削除 ( /master/<table>/delete/<id> ) ---
-@app.route('/master/<table>/delete/<int:item_id>', methods=['POST'])
-def master_delete(table, item_id):
-    # 追加のときと同じく、許可したテーブル以外は404にする
-    if table not in MASTERS:
-        abort(404)
-
-    # delete_master_item は、削除できれば True、
-    # ゲームで使われている項目など、削除できなければ False を返す。
-    # (使用中の項目を消すと、ゲームが参照先を失ってしまうため)
-    if delete_master_item(table, item_id):
-        msg = '削除しました'
-    else:
-        msg = 'ゲームで使われているため削除できません'
-    return redirect(url_for('master', msg=msg))
-
-
-# ============================================================
-# 11. ユーザー登録 ( /signup )
-# ============================================================
-# GET  : 登録フォームを表示
-# POST : 入力内容をチェックして、問題なければ users テーブルに保存
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    error = None      # 画面に出すエラーメッセージ(無ければ None)
-    username = ''     # 入力し直しの手間を減らすため、ユーザー名は画面に残す
-
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        # パスワードは、空白も含めて入力されたとおりに扱うので strip() しない
-        password = request.form.get('password', '')
-        password_confirm = request.form.get('password_confirm', '')
-
-        # 上から順にチェックして、最初に当てはまったものがエラーになる。
-        # すべて問題なければ、パスワードを変換(ハッシュ化)して保存する。
-        # パスワードそのものをDBに保存しないのは、
-        # DBの中身が漏れても元のパスワードが分からないようにするため。
-        if not username or not password:
-            error = 'ユーザー名とパスワードを入力してください'
-        elif len(password) < 8:
-            error = 'パスワードは8文字以上にしてください'
-        elif password != password_confirm:
-            error = 'パスワードが一致しません'
-        elif add_user(username, generate_password_hash(password)):
-            # 登録できた。登録後はリダイレクト(再読み込みで二重登録されないため)
-            return redirect(url_for('login', msg='登録しました。ログインしてください'))
-        else:
-            # add_user が False = 同じユーザー名がすでにある
-            error = 'そのユーザー名はすでに使われています'
-
-    return render_template('signup.html',
-                           error=error,
-                           msg=request.args.get('msg', ''),
-                           username=username)
-
-
-# ============================================================
-# 12. ログイン ( /login )
-# ============================================================
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = None
-    username = ''
-
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-
-        # ユーザー名で検索(いなければ None)
-        user = get_user_by_username(username)
-
-        # user[2] は保存済みのパスワードのハッシュ。
-        # check_password_hash は、入力されたパスワードを同じ方法で変換して、
-        # 保存済みのハッシュと合うかを True / False で返す。
-        if user is not None and check_password_hash(user[2], password):
-            session.clear()                  # 前の状態を消してから
-            session['user_id'] = user[0]     # ログインした人のIDを記憶する
-            session['username'] = user[1]    # 画面に表示する名前も記憶する
-            return redirect(url_for('index'))
-
-        # ユーザー名が無い場合も、パスワードが違う場合も、同じメッセージにする
-        # (「このユーザー名は存在する」と、他人に教えてしまわないため)
-        error = 'ユーザー名またはパスワードが違います'
-
-    return render_template('login.html',
-                           error=error,
-                           msg=request.args.get('msg', ''),
-                           username=username)
-
-
-# ============================================================
-# 13. ログアウト ( /logout )
-# ============================================================
-# POSTのみ(削除と同じ考え方。URLを開いただけでログアウトさせない)
-@app.route('/logout', methods=['POST'])
-def logout():
-    session.clear()      # 記憶していた内容をすべて消す = ログアウト
-    return redirect(url_for('login', msg='ログアウトしました'))
-
-
-# ============================================================
-# 14. 日記(ゲームごとの日記の表示・追加・編集・削除)
-# ============================================================
-# 1つのゲームに、日記を何件でも書ける(同じ日に何回書いてもよい)。
-# どのページにも @login_required を付けて、ログインしていない人は入れないようにしている。
-# 他の人のゲーム・日記は、db.py 側が user_id で絞っているので取得できない(404にする)。
-
-# 日付の入力を、'2026-11-11' の形の文字列に整える関数
-# 空欄や、日付として正しくない文字が届いたときは「今日」にする。
-# (画面では日付入力欄を使うが、送信内容は自由に書き換えられるため、念のため確認する)
-def normalize_date(text):
-    try:
-        return date.fromisoformat(text).isoformat()
-    except (ValueError, TypeError):    # 日付にできない / 項目が届いていない(None)
-        return date.today().isoformat()
-    
-# --- 日記ページの表示 ( /game/<id>/diary ) ---
-# 上に「書き込みフォーム」、下に「これまでの日記の一覧」を出す。
-@app.route('/game/<int:game_id>/diary')
-@login_required
-def diary(game_id):
-    user_id = session['user_id']
-    # 自分のゲームか確認する(他人のゲームや存在しないゲームなら404)
-    game = get_game(game_id, user_id)
-    if game is None:
-        abort(404)
-
-    return render_template(
-        'diary.html',
-        game=game,                                  # ゲーム名などを画面に出すため
-        diaries=get_diaries(game_id, user_id),      # 日記の一覧(新しい順)
-        today=date.today().isoformat(),             # 日付入力欄の初期値(今日)
-        msg=request.args.get('msg', '')             # 追加・更新・削除の結果メッセージ
-    )
-
-# --- 日記の追加 ( /game/<id>/diary/add ) ---
-@app.route('/game/<int:game_id>/diary/add', methods=['POST'])
-@login_required
-def diary_add(game_id):
-    user_id = session['user_id']
-    if get_game(game_id, user_id) is None:
-        abort(404)
-
-    # 本文は前後の空白を取り除く。空(空白だけも含む)なら保存しない。
-    body = request.form.get('body', '').strip()
-    if not body:
-        return redirect(url_for('diary', game_id=game_id, msg='本文を入力してください'))
-
-    diary_date = normalize_date(request.form.get('diary_date'))
-    add_diary(game_id, user_id, diary_date, body)
-
-    # 追加後は日記ページへ戻る(リダイレクトなので、再読み込みしても二重登録されない)
-    return redirect(url_for('diary', game_id=game_id, msg='日記を追加しました'))
-
-
-# --- 日記の編集 ( /diary/<id>/edit ) ---
-# GET  : 今の内容が入った編集フォームを表示
-# POST : 入力内容をチェックして、問題なければ更新
-@app.route('/diary/<int:diary_id>/edit', methods=['GET', 'POST'])
-@login_required
-def diary_edit(diary_id):
-    user_id = session['user_id']
-    # entry = (id, game_id, diary_date, body)。自分の日記でなければ None
-    entry = get_diary(diary_id, user_id)
-    if entry is None:
-        abort(404)
-
-    game_id = entry[1]
-    game = get_game(game_id, user_id)    # 画面にゲーム名を出す・戻り先に使う
-    if game is None:
-        abort(404)
-
-    error = None
-    if request.method == 'POST':
-        body = request.form.get('body', '').strip()
-        diary_date = normalize_date(request.form.get('diary_date'))
-        if not body:
-            error = '本文を入力してください'
-            # 画面に戻したとき、選んだ日付が元に戻らないよう entry を入力内容で作り直す
-            entry = (diary_id, game_id, diary_date, body)
-        else:
-            update_diary(diary_id, user_id, diary_date, body)
-            return redirect(url_for('diary', game_id=game_id, msg='日記を更新しました'))
-
-    return render_template('diary_edit.html', game=game, entry=entry, error=error)
-
-# --- 日記の削除 ( /diary/<id>/delete ) ---
-# POSTのみ(ゲームの削除と同じ考え方。URLを開いただけでは消えない)
-@app.route('/diary/<int:diary_id>/delete', methods=['POST'])
-@login_required
-def diary_delete(diary_id):
-    user_id = session['user_id']
-    entry = get_diary(diary_id, user_id)
-    if entry is None:
-        abort(404)
-
-    delete_diary(diary_id, user_id)
-
-    # 消したあとは、その日記があったゲームの日記ページへ戻る(entry[1] = game_id)
-    return redirect(url_for('diary', game_id=entry[1], msg='日記を削除しました'))

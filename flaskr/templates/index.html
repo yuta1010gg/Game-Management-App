@@ -10,6 +10,7 @@
         <div class="menu-buttons">
             <a href="{{ url_for('form') }}" class="menu-btn primary">＋ ゲームを登録する</a>
             <a href="{{ url_for('stats') }}" class="menu-btn">統計を見る</a>
+            <a href="{{ url_for('calendar_page') }}" class="menu-btn">📅 カレンダー</a>
              <a href="{{ url_for('master') }}" class="menu-btn">マスタ管理</a>
 
             {% if session.get('username') %}

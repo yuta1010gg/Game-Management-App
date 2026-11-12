@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>ゲーム管理アプリ - カレンダー</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <h1>ゲーム管理アプリ</h1>
+
+        <div class="menu-buttons">
+            <a href="{{ url_for('index') }}" class="menu-btn">← 一覧に戻る</a>
+        </div>
+
+        <h2>📅 カレンダー</h2>
+
+        {% if msg %}
+            <p class="msg">{{ msg }}</p>
+        {% endif %}
+
+        <div class="cal-nav">
+            <a href="{{ url_for('calendar_page', month=prev_month) }}">◀ 前の月</a>
+            <strong>{{ year }}年{{ month }}月</strong>
+            <a href="{{ url_for('calendar_page', month=next_month) }}">次の月 ▶</a>
+            <a href="{{ url_for('calendar_page') }}">今月</a>
+        </div>
+
+        <div class="cal-grid">
+            {# 曜日の見出し(日曜始まり) #}
+            {% for w in ['日', '月', '火', '水', '木', '金', '土'] %}
+                <div class="cal-head">{{ w }}</div>
+            {% endfor %}
+
+            {# 日付のマス。weeks は「週のリスト」、week は「その週の7日」 #}
+            {% for week in weeks %}
+                {% for cell in week %}
+                    <div class="cal-cell{% if not cell.in_month %} other{% endif %}{% if cell.is_today %} today{% endif %}{% if cell.is_selected %} selected{% endif %}{% if cell.col == 0 %} sun{% elif cell.col == 6 %} sat{% endif %}">
+                        {% if cell.in_month %}
+                            {# 日付をクリックすると、ページの下にその日の詳細が開く #}
+                            <a class="cal-daynum" href="{{ url_for('calendar_page', month=month_key, day=cell.iso, _anchor='day-detail') }}">{{ cell.day }}</a>
+
+                            {% for it in cell.visible %}
+                                <a class="cal-item {{ it.kind }}" href="{{ it.url }}" title="{{ it.icon }} {{ it.text }}">{{ it.icon }}<span class="cal-text"> {{ it.text }}</span></a>
+                            {% endfor %}
+
+                            {# 上限を超えた分。押すと、その日の詳細が開く #}
+                            {% if cell.more %}
+                                <a class="cal-more" href="{{ url_for('calendar_page', month=month_key, day=cell.iso, _anchor='day-detail') }}">もっと見る(+{{ cell.more }})</a>
+                            {% endif %}
+                        {% else %}
+                            {# 前後の月の日付は、薄く表示するだけ #}
+                            <span class="cal-daynum">{{ cell.day }}</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+
+        <p class="cal-legend">🎮 予定　🛒 購入日　📖 日記(同じゲームは1行にまとめて表示)</p>
+
+        {% if selected %}
+            <section id="day-detail" class="cal-detail">
+                <h2>{{ selected_label }}</h2>
+
+                <h3>🎮 予定</h3>
+                {% if detail.events %}
+                    <ul class="cal-list">
+                        {% for e in detail.events %}
+                            <li>
+                                <strong>{{ e.title }}</strong>
+                                <span class="cal-sub">
+                                    {% if e.start != e.end %}{{ e.start }} 〜 {{ e.end }}{% else %}{{ e.start }}{% endif %}
+                                    {% if e.game_title %} / {{ e.game_title }}{% endif %}
+                                </span>
+                                {% if e.memo %}<div class="cal-memo">{{ e.memo }}</div>{% endif %}
+                                <a href="{{ url_for('event_edit', event_id=e.id) }}">編集</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="cal-empty">この日の予定はありません</p>
+                {% endif %}
+
+                <h3>🛒 購入日</h3>
+                {% if detail.purchases %}
+                    <ul class="cal-list">
+                        {% for p in detail.purchases %}
+                            <li><a href="{{ url_for('detail', game_id=p.game_id) }}">{{ p.title }}</a></li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="cal-empty">この日に購入したゲームはありません</p>
+                {% endif %}
+
+                <h3>📖 日記</h3>
+                {% if detail.diaries %}
+                    <ul class="cal-list">
+                        {% for d in detail.diaries %}
+                            <li>
+                                <a href="{{ url_for('diary', game_id=d.game_id) }}">{{ d.game_title }}</a>
+                                <div class="cal-memo">{{ d.body }}</div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="cal-empty">この日の日記はありません</p>
+                {% endif %}
+
+                <h3>予定を追加</h3>
+                <form method="post" action="{{ url_for('event_add') }}">
+                    <table border="1">
+                        <tr>
+                            <th>予定の名前</th>
+                            <td><input type="text" name="title" maxlength="100" required></td>
+                        </tr>
+                        <tr>
+                            <th>開始日</th>
+                            <td><input type="date" name="start_date" value="{{ selected }}" required></td>
+                        </tr>
+                        <tr>
+                            <th>終了日</th>
+                            <td>
+                                <input type="date" name="end_date">
+                                <br><small>※ 空欄なら、1日だけの予定になります</small>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>ゲーム</th>
+                            <td>
+                                <select name="game_id">
+                                    <option value="">指定なし(ゲーム全般の予定)</option>
+                                    {% for g in game_choices %}
+                                        <option value="{{ g[0] }}">{{ g[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>メモ</th>
+                            <td><textarea name="memo" rows="3"></textarea></td>
+                        </tr>
+                    </table>
+
+                    <br>
+                    <input type="submit" value="追加">
+                </form>
+            </section>
+        {% else %}
+            <p class="cal-empty">日付をクリックすると、その日の詳細と予定の追加フォームが開きます。</p>
+        {% endif %}
+
+        <br>
+        <a href="{{ url_for('index') }}">一覧に戻る</a>
+    </body>
+</html>
