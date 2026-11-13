@@ -129,6 +129,7 @@ def login():
 # ============================================================
 # POSTのみ(削除と同じ考え方。URLを開いただけでログアウトさせない)
 @app.route('/logout', methods=['POST'])
+@login_required
 def logout():
     session.clear()      # 記憶していた内容をすべて消す = ログアウト
     return redirect(url_for('login', msg='ログアウトしました'))

@@ -19,6 +19,7 @@
 
             <form method="post" action="{{ url_for('master_add', table=s.table) }}">
                 <input type="text" name="name" placeholder="{{ s.label }}を追加" required>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="submit" value="追加">
             </form>
 
@@ -37,6 +38,7 @@
                                 <form method="post"
                                       action="{{ url_for('master_delete', table=s.table, item_id=item_id) }}"
                                       onsubmit="return confirm('「{{ name }}」を削除しますか？');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="submit" value="削除">
                                 </form>
                             {% else %}

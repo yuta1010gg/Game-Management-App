@@ -9,6 +9,9 @@ from flask import render_template, session
 # __init__.py で作った Flask アプリ本体
 from flaskr import app
 
+from flaskr.auth import login_required
+
+
 # db.py:統計ページ用の集計関数
 from flaskr.db import get_status_counts, get_genre_counts, get_platform_counts, get_summary
 
@@ -17,6 +20,7 @@ from flaskr.db import get_status_counts, get_genre_counts, get_platform_counts, 
 # 統計ページ ( /stats )
 # ============================================================
 @app.route('/stats')
+@login_required  
 def stats():
     # db.py の関数で、ログイン中のユーザーのゲームを集計する。
     # 戻り値は [('未プレイ', 2), ('クリア済み', 3), ...] のような

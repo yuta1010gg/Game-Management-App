@@ -11,6 +11,7 @@
         <h2>ゲーム編集</h2>
 
           <form method="post" action="{{ url_for('update', game_id=game[0]) }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <table border="1">
                 <tr>
                     <th>タイトル</th>
@@ -95,8 +96,9 @@
         </form>
 
         <form method="post" action="{{ url_for('delete', game_id=game[0]) }}"
-              onsubmit="return confirm('本当に削除しますか？');">
-            <input type="submit" value="削除">
+                onsubmit="return confirm('本当に削除しますか？');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="submit" value="削除">
         </form>
 
         <br>

@@ -256,6 +256,7 @@ def index():
 # 新規登録フォームの表示 ( /form )
 # ============================================================
 @app.route('/form')
+@login_required
 def form():
     # プルダウン用の選択肢を、DBから取得する。
     # (HTMLに直書きせずDBから取るので、マスタに項目を足せば自動で反映される)
@@ -274,6 +275,7 @@ def form():
 # 新規登録処理 ( /register ) ― フォームからのPOSTを受け取る
 # ============================================================
 @app.route('/register',methods=['post'])
+@login_required
 def register():
     # ----- フォームの入力値を取得 -----
     # request.form は「フォームで送信された内容」。
@@ -330,6 +332,7 @@ def register():
 #                 例) /delete/3 なら game_id = 3
 # POSTのみ許可 → URLを直接開いただけでは削除されない。
 @app.route('/delete/<int:game_id>', methods=['POST'])
+@login_required
 def delete(game_id):
     user_id = session['user_id']
     con = sqlite3.connect(DATABASE)
@@ -354,6 +357,7 @@ def delete(game_id):
 # 更新処理 ( /update/<id> ) ― 詳細ページの編集フォームからのPOST
 # ============================================================
 @app.route('/update/<int:game_id>', methods=['POST'])
+@login_required
 def update(game_id):
     # まず「自分のゲームか」を確認する。
     # 他人のゲームや存在しないゲームなら 404 を返して、ここで処理を終える。
@@ -407,6 +411,7 @@ def update(game_id):
 # 詳細ページ ( /game/<id> ) ― 編集フォームを兼ねる
 # ============================================================
 @app.route('/game/<int:game_id>')
+@login_required
 def detail(game_id):
     # 指定IDのゲームを1件取得(自分のゲームでなければ None が返る)
     game = get_game(game_id, session['user_id'])
@@ -426,6 +431,7 @@ def detail(game_id):
 # ============================================================
 # 一覧のチェックボックスから送られる。
 @app.route('/favorite/<int:game_id>', methods=['POST'])
+@login_required
 def toggle_favorite(game_id):
     # チェックありなら 1、なしなら 0(チェックを外すと項目ごと届かないため)
     favorite = 1 if request.form.get('favorite') else 0
@@ -438,4 +444,4 @@ def toggle_favorite(game_id):
     # request.referrer は「直前に見ていたページのURL」。
     # そこへ戻すので、検索条件やページ位置を保ったまま一覧に戻れる。
     # (取得できないときは、条件なしの一覧へ)
-    return redirect(request.referrer or url_for('index'))
+    return redirect(url_for('index'))

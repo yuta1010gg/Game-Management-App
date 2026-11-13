@@ -15,6 +15,7 @@
         {% endif %}
 
         <form method="post" action="{{ url_for('diary_edit', diary_id=entry[0]) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <table border="1">
                 <tr>
                     <th>日付</th>

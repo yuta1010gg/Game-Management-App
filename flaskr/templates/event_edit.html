@@ -15,6 +15,7 @@
         {% endif %}
 
         <form method="post" action="{{ url_for('event_edit', event_id=event[0]) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <table border="1">
                 <tr>
                     <th>予定の名前</th>

@@ -35,8 +35,12 @@
 
 import os
 from flask import Flask
+from flask_wtf.csrf import CSRFProtect
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key")
+
+# CSRF対策を有効にする
+csrf = CSRFProtect(app)
 
 # 各ファイルを読み込む。
 # 読み込むと、そのファイルの中の @app.route(...) が実行されて、URLが登録される。

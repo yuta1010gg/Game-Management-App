@@ -11,6 +11,9 @@ from flask import render_template, request, redirect, url_for, abort
 # __init__.py で作った Flask アプリ本体
 from flaskr import app
 
+# auth.py:ログインしていない人をログイン画面へ案内するデコレータ
+from flaskr.auth import login_required
+
 # db.py:MASTERS は「管理してよいテーブルの一覧(辞書)」、
 # 他の3つは一覧取得・追加・削除の関数
 from flaskr.db import MASTERS, get_master_items, add_master_item, delete_master_item
@@ -26,6 +29,7 @@ from flaskr.db import MASTERS, get_master_items, add_master_item, delete_master_
 
 # --- マスタ管理ページの表示 ( /master ) ---
 @app.route('/master')
+@login_required
 def master():
     # 追加・削除の結果メッセージ(リダイレクト時にURLで受け渡される)
     msg = request.args.get('msg', '')
@@ -43,6 +47,7 @@ def master():
 # --- 追加 ( /master/<table>/add ) ---
 # <table> には URL の文字列が入る。例) /master/platforms/add
 @app.route('/master/<table>/add', methods=['POST'])
+@login_required  
 def master_add(table):
     # テーブル名はSQLの ? で渡せないので、SQL文に直接使うことになる。
     # そのため、ユーザーが好きな名前を指定できないよう、
@@ -66,6 +71,7 @@ def master_add(table):
 
 # --- 削除 ( /master/<table>/delete/<id> ) ---
 @app.route('/master/<table>/delete/<int:item_id>', methods=['POST'])
+@login_required  
 def master_delete(table, item_id):
     # 追加のときと同じく、許可したテーブル以外は404にする
     if table not in MASTERS:

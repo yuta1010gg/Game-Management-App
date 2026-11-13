@@ -10,6 +10,8 @@ import uuid    # ランダムなファイル名を作る
 # __init__.py で作った Flask アプリ本体
 from flaskr import app
 
+from PIL import Image
+
 # 画像の保存先フォルダ(static フォルダの中の uploads)
 UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
 
@@ -40,6 +42,14 @@ def save_image(file):
     if ext not in ALLOWED_EXTENSIONS:
         return None
 
+    # 実際に画像ファイルとして読み込めるか確認する
+    try:
+        image = Image.open(file)
+        image.verify()
+        file.seek(0)
+    except Exception:
+        return None
+
     # 保存先フォルダが無ければ作る(あれば何もしない)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -49,7 +59,6 @@ def save_image(file):
 
     file.save(os.path.join(UPLOAD_FOLDER, filename))
     return filename
-
 
 # 保存済みの画像ファイルを削除する関数
 # filename が None や空のとき、ファイルが存在しないときは何もしない
