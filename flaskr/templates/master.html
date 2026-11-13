@@ -37,7 +37,7 @@
                             {% if count == 0 %}
                                 <form method="post"
                                       action="{{ url_for('master_delete', table=s.table, item_id=item_id) }}"
-                                      onsubmit="return confirm('「{{ name }}」を削除しますか？');">
+                                      onsubmit="return confirm('この項目を削除しますか？');">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="submit" value="削除">
                                 </form>

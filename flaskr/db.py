@@ -30,10 +30,14 @@
 #   con.close()                       ④ 接続を閉じる
 # ============================================================
 
+import os
 import sqlite3
 
 # 使用するSQLiteデータベースのファイル名(games.py が、ここの DATABASE を借りて使っている)
-DATABASE = 'database.db'
+# プロジェクトのフォルダ(flaskr の1つ外)にある database.db を、場所を固定して指す。
+# (PythonAnywhere では「アプリを動かした場所」が分かりにくく、
+#  ファイル名だけだと、思わぬ場所にデータベースができてしまうため)
+DATABASE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'database.db')
 
 
 # ============================================================
