@@ -37,9 +37,7 @@ import os
 from flask import Flask
 from flask_wtf.csrf import CSRFProtect
 app = Flask(__name__)
-secret_key = os.environ.get("SECRET_KEY")
-if not secret_key:
-    raise RuntimeError("SECRET_KEY が設定されていません")
+secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-local-only")
 app.secret_key = secret_key
 # CSRF対策を有効にする
 csrf = CSRFProtect(app)
