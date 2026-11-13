@@ -235,14 +235,16 @@
         {% endif %}
 
         <br>
-
+        <div class="pagination">
         {% if page > 1 %}
-        <a href="{{ url_for('index', page=page - 1, q=q, platform_id=platform_id, status_id=status_id, genre_id=genre_id,order=order) }}">前へ</a>
+            <a href="{{ url_for('index', page=page - 1, q=q, platform_id=platform_id, status_id=status_id, genre_id=genre_id, order=order) }}">前へ</a>
         {% endif %}
+
         <span>{{ page }} / {{ total_pages }}</span>
 
         {% if page < total_pages %}
-        <a href="{{ url_for('index', page=page + 1, q=q, platform_id=platform_id, status_id=status_id, genre_id=genre_id,order=order) }}">次へ</a>
+            <a href="{{ url_for('index', page=page + 1, q=q, platform_id=platform_id, status_id=status_id, genre_id=genre_id, order=order) }}">次へ</a>
         {% endif %}
+        </div>
     </body>
 </html>

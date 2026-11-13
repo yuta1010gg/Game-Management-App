@@ -509,6 +509,14 @@ a.cal-daynum:hover {
     color: var(--danger);
 }
 
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+}
+
 /* スマホなど画面が狭いとき:マスを小さく、文字も小さくする */
 @media (max-width: 700px) {
     .cal-cell {
